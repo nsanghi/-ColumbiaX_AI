@@ -139,7 +139,7 @@ def bfs(initial_state):
             return
 
         # the node out of queue is not a goal and we need to expand it
-        nodes_expanded += 1
+        #nodes_expanded += 1
 
         for neighbor in state.neighbors():
             if not neighbor in visited_states:
@@ -194,7 +194,7 @@ def dfs(initial_state):
 
         # the node out of queue is not a goal and we need to expand it
         nodes_expanded += 1
-        print(nodes_expanded)
+        #print(nodes_expanded)
 
         ## for dfs we need to reverse the neighbour list before inserstion so
         # that popping will result in UDLR order
