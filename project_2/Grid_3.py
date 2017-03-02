@@ -190,6 +190,6 @@ if __name__ == '__main__':
 
         print(g.getAvailableMoves())
 
-        v = raw_input()
+        v = input()
 
         g.move(v)
