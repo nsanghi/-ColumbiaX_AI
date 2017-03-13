@@ -13,8 +13,16 @@ class PlayerAI(BaseAI):
 
   def __init__(self):
     #self.TIMELIMIT = (0.1+0.025)*10000 # the margin to use for completing the call
-    self.TIMELIMIT = (0.1+0.025) # the margin to use for completing the call
+    self.TIMELIMIT = 0.1 # the margin to use for completing the call
+    self.method = 'alphabeta' # ['minimax', 'alphabeta'] this will control what strategy is used to search
     self.start_time = None
+
+  def display(self, grid):
+    for i in xrange(grid.size):
+      for j in xrange(grid.size):
+        print "%6d  " % grid.map[i][j],
+      print ""
+    print ""
 
   def score(self, grid):
     smooth_wt = 0.1
@@ -24,7 +32,7 @@ class PlayerAI(BaseAI):
 
     smooth_val = self.smoothness(grid)
     ava_cells = len(grid.getAvailableCells())
-    if ava_cells >0:
+    if ava_cells >3:
       empty_val = math.log(ava_cells)
     else:
       empty_val = -100000
@@ -141,8 +149,14 @@ class PlayerAI(BaseAI):
     try:
       depth = 1
       while True:
+        #print depth
+        if self.method == 'minimax':
+            score, move = self.minimax(grid, depth)
+        elif self.method == 'alphabeta':
+            score, move = self.alphabeta(grid, depth)
+        else:
+            raise NotImplementedError
 
-        score, move = self.alphabeta(grid, depth)
         if score > best_score:
             best_move = move
             best_score = score
@@ -150,12 +164,49 @@ class PlayerAI(BaseAI):
         depth += 1
 
     except Timeout:
-        #print 'Timeout PlayerAI with depth={}'.format(depth)
+        print 'Timeout PlayerAI with depth={}'.format(depth)
         return best_move
 
     # Return the best move from the last completed search iteration
     return best_move
 
+
+
+  def minimax(self, grid, depth, maximizing_player=True):
+
+    """Implement the minimax search algorithm as described in the lectures.
+    """
+
+    if time.clock() - self.start_time > self.TIMELIMIT:
+      raise Timeout()
+
+    # TODO: finish this function!
+
+    # get moves for current grid
+    moves = grid.getAvailableMoves()
+
+    # if reached depth zero - then no need to explore any successors
+    # also if reached a state where no legal moves then
+    # we just return the score. "move" returned is of no value
+    if depth == 0 or not moves:
+      return self.score(grid), None
+
+    # now we need to go over all the legal moves and find best
+    best_score = float("-inf") if maximizing_player else float("inf")
+    best_move = None
+
+    for move in moves:
+      next_game = self.forecast_move(grid, move)
+      score, _ = self.minimax(next_game, depth - 1, not maximizing_player)
+      if maximizing_player:
+        if score >= best_score:
+          best_score = score
+          best_move = move
+      else:
+        if score <= best_score:
+          best_score = score
+          best_move = move
+    return (best_score, best_move)
 
   def alphabeta(self, grid, depth, alpha=float("-inf"), beta=float("inf"), maximizing_player=True):
     """Implement minimax search with alpha-beta pruning as described in the lectures.
@@ -171,18 +222,15 @@ class PlayerAI(BaseAI):
     best_score = float("-inf") if maximizing_player else float("inf")
     best_move = None
 
+    # get legal moves for current player
+    moves = grid.getAvailableMoves()
+    if not moves:
+      return self.score(grid), None
 
-    if maximizing_player:
-      # get legal moves for current human player
-      moves = grid.getAvailableMoves()
-      if not moves:
-        return self.score(grid), None
-
-      for move in moves:
-        next_game = self.forecast_move(grid, move)
-
-        score, _ = self.alphabeta(next_game, depth - 1, alpha, beta, not maximizing_player)
-
+    for move in moves:
+      next_game = self.forecast_move(grid, move)
+      score, _ = self.alphabeta(next_game, depth - 1, alpha, beta, not maximizing_player)
+      if maximizing_player:
         if score >= best_score:
           best_score = score
           best_move = move
@@ -191,25 +239,15 @@ class PlayerAI(BaseAI):
           break
 
         alpha = max(alpha, best_score)
-    else:
-      # this is the place for computer move to get the worst possible value
-      cells = grid.getAvailableCells()
-      if not cells:
-        return self.score(grid), None
-      for cell in cells:
-        for tile_val in [2,4]:
-          next_game = grid.clone()
-          next_game.setCellValue(cell, tile_val)
-          score, _ = self.alphabeta(next_game, depth - 1, alpha, beta, not maximizing_player)
 
-          if score <= best_score:
-            best_score = score
-            best_move = None
+      else:
+        if score <= best_score:
+          best_score = score
+          best_move = move
 
-          if best_score <= alpha:
-            break
+        if best_score <= alpha:
+          break
 
-          beta = min(beta, best_score)
-
+        beta = min(beta, best_score)
 
     return best_score, best_move
